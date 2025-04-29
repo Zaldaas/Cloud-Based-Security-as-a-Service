@@ -1,7 +1,6 @@
 import requests
 import json
-import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import sys
 
 # --- Configuration ---
@@ -9,37 +8,7 @@ import sys
 API_BASE_URL = "https://vebsnzh5ob.execute-api.us-east-2.amazonaws.com" # Replace with your URL
 API_ENDPOINT = "/logs" # The route path you configured
 
-# --- Argument Parsing ---
-def parse_arguments():
-    """Parses command-line arguments."""
-    parser = argparse.ArgumentParser(description="Fetch logs via the SIEM Log API.")
-    parser.add_argument(
-        "--start-time",
-        help="Start time in ISO 8601 UTC format (e.g., 2025-04-29T00:00:00Z)",
-        type=str,
-        default=None
-    )
-    parser.add_argument(
-        "--end-time",
-        help="End time in ISO 8601 UTC format (e.g., 2025-04-29T01:00:00Z)",
-        type=str,
-        default=None
-    )
-    parser.add_argument(
-        "--instance-id",
-        help="Specific EC2 instance ID to filter logs for (e.g., i-012345abcdef)",
-        type=str,
-        default=None
-    )
-    parser.add_argument(
-        "--output-file",
-        help="Optional file path to save the JSON output",
-        type=str,
-        default=None
-    )
-    return parser.parse_args()
-
-# --- API Call ---
+# --- API Call Function (Copied from api_caller_script_v1) ---
 def fetch_logs(base_url, endpoint, params=None):
     """Calls the API Gateway endpoint to fetch logs."""
     # Construct the full URL
@@ -51,7 +20,7 @@ def fetch_logs(base_url, endpoint, params=None):
     filtered_params = {k: v for k, v in params.items() if v is not None} if params else None
 
     print(f"Calling API: {full_url}")
-    print(f"With parameters: {json.dumps(filtered_params) if filtered_params else 'None'}")
+    print(f"With parameters: {json.dumps(filtered_params) if filtered_params else 'Default (Last Hour)'}") # Modified print statement
 
     try:
         # Make the GET request with parameters and a timeout
@@ -82,24 +51,53 @@ def fetch_logs(base_url, endpoint, params=None):
         print(f"An unexpected error occurred during the request: {req_err}", file=sys.stderr)
         return None
 
-# --- Main Execution ---
+# --- Example Usage within another script ---
 if __name__ == "__main__":
-    # Parse command-line arguments
-    args = parse_arguments()
+    print("Example: Fetching logs from the last hour...")
 
-    # Prepare parameters dictionary for the API call
-    api_params = {
-        "start_time": args.start_time,
-        "end_time": args.end_time,
-        "instance_id": args.instance_id
+    # Define parameters directly in the script
+    # To fetch the last hour, we pass None for start/end times
+    # The Lambda function applies the default logic
+    call_params = {
+        "start_time": None,
+        "end_time": None,
+        "instance_id": None # Set to an instance ID string if needed, or leave as None for all
     }
 
-    # Fetch the logs from the API
-    result_data = fetch_logs(API_BASE_URL, API_ENDPOINT, params=api_params)
+    # Call the function to get the logs
+    log_data = fetch_logs(API_BASE_URL, API_ENDPOINT, params=call_params)
 
     # Process the result
-    if result_data:
-        print("\n--- API Response ---")
-        # Pretty print the JSON response to the console
-        print(json.dumps(result_data, indent=2))
+    if log_data and 'logs' in log_data:
+        print(f"\nSuccessfully fetched {log_data.get('count', 0)} log entries.")
+        # You can now iterate through the logs or process the data
+        for log_entry in log_data['logs']:
+             # Example: Print just the message field
+             print(f"  - {log_entry.get('message')}")
+             # Or access other fields: log_entry.get('timestamp'), log_entry.get('user'), etc.
+
+        # Example: Print the full response structure again
+        # print("\n--- Full API Response ---")
+        # print(json.dumps(log_data, indent=2))
+
+    else:
+        print("\nFailed to fetch logs or no logs found.")
+
+    # --- Example: Fetching logs for a specific time range and instance ---
+    print("\nExample: Fetching logs for a specific time and instance...")
+
+    specific_params = {
+        "start_time": "2025-04-29T00:18:00Z", # Example start time
+        "end_time": "2025-04-29T00:20:00Z",   # Example end time
+        "instance_id": "i-095abc5bf9b3d41a3" # Example instance ID
+    }
+
+    specific_log_data = fetch_logs(API_BASE_URL, API_ENDPOINT, params=specific_params)
+
+    if specific_log_data and 'logs' in specific_log_data:
+         print(f"\nSuccessfully fetched {specific_log_data.get('count', 0)} specific log entries.")
+         # Process these logs as needed
+         # print(json.dumps(specific_log_data, indent=2))
+    else:
+        print("\nFailed to fetch specific logs or no logs found.")
 
