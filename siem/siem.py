@@ -86,18 +86,33 @@ if __name__ == "__main__":
     # --- Example: Fetching logs for a specific time range and instance ---
     print("\nExample: Fetching logs for a specific time and instance...")
 
-    specific_params = {
+    instance_1_params = {
         "start_time": "2025-04-29T00:18:00Z", # Example start time
         "end_time": "2025-04-29T00:20:00Z",   # Example end time
         "instance_id": "i-095abc5bf9b3d41a3" # Example instance ID
     }
 
-    specific_log_data = fetch_logs(API_BASE_URL, API_ENDPOINT, params=specific_params)
+    instance_2_params = {
+        "start_time": "2025-04-29T00:18:00Z", # Example start time
+        "end_time": "2025-04-29T00:20:00Z",   # Example end time
+        "instance_id": "i-095abc5bf9b3d41a3" # Example instance ID
+    }
 
-    if specific_log_data and 'logs' in specific_log_data:
-         print(f"\nSuccessfully fetched {specific_log_data.get('count', 0)} specific log entries.")
+    instance_1_log_data = fetch_logs(API_BASE_URL, API_ENDPOINT, params=instance_1_params)
+    instance_2_log_data = fetch_logs(API_BASE_URL, API_ENDPOINT, params=instance_2_params)
+
+
+    if instance_1_log_data and 'logs' in instance_1_log_data:
+         print(f"\nSuccessfully fetched {instance_1_log_data.get('count', 0)} specific log entries for instance 1.")
          # Process these logs as needed
-         # print(json.dumps(specific_log_data, indent=2))
+         print(json.dumps(instance_1_log_data, indent=2))
     else:
-        print("\nFailed to fetch specific logs or no logs found.")
+        print("\nFailed to fetch specific logs or no logs found for instance 1.")
+
+    if instance_2_log_data and 'logs' in instance_2_log_data:
+         print(f"\nSuccessfully fetched {instance_2_log_data.get('count', 0)} specific log entries for instance 2.")
+         # Process these logs as needed
+         print(json.dumps(instance_2_log_data, indent=2))
+    else:
+        print("\nFailed to fetch specific logs or no logs found for instance 2.")
 
