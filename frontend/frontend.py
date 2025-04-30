@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 import json # Import json for potential error message parsing
 import re # Import re for title conversion
+from streamlit_autorefresh import st_autorefresh # Import the autorefresh component
 
 # --- Configuration ---
 BACKEND_URL = "http://127.0.0.1:5000" # Default Flask dev server URL
@@ -156,6 +157,10 @@ tab1, tab2 = st.tabs(["📊 Logs", "🛡️ Threats"])
 with tab1:
     st.header("CloudWatch Logs")
     search_logs = st.text_input("Search Logs", key="log_search", placeholder="Enter keyword to filter logs...")
+
+    # Auto-refresh this tab every 10 seconds (10000 milliseconds)
+    st_autorefresh(interval=10 * 1000, key="logfetchrefresh")
+
     logs_data = fetch_data("/api/logs")
 
     if logs_data is not None:

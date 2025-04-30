@@ -27,17 +27,51 @@ def get_cloudwatch_logs():
             aws_secret_access_key=aws_secret_access_key
         )
 
-        # Fetch log events
-        # startFromHead=True gets older events first. Remove or set to False for newest first.
-        # limit can be adjusted as needed.
-        response = logs_client.get_log_events(
-            logGroupName=log_group_name,
-            logStreamName=log_stream_name,
-            startFromHead=True, # Get logs from the beginning of the stream
-            limit=1000 # Adjust as needed, max 10000
-        )
+        events = []
+        next_token = None
 
-        events = response.get('events', [])
+        while True:
+            kwargs = {
+                'logGroupName': log_group_name,
+                'logStreamName': log_stream_name,
+                'startFromHead': True,
+                'limit': 1000 # Keep limit per request reasonable
+            }
+            if next_token:
+                kwargs['nextToken'] = next_token
+
+            try:
+                response = logs_client.get_log_events(**kwargs)
+            except logs_client.exceptions.ResourceNotFoundException:
+                 # Check for ResourceNotFoundException specifically for get_log_events
+                 # Might happen if stream was deleted between checks or initial list
+                 if not events: # If no events were fetched at all, it's a 404
+                     return {"error": f"Log stream '{log_stream_name}' not found in group '{log_group_name}'."}, 404
+                 else: # If some events were fetched, just stop pagination
+                     print(f"Warning: Log stream '{log_stream_name}' disappeared during pagination.")
+                     break # Exit the loop, return what we have
+            except Exception as e:
+                 # Catch other potential errors during get_log_events
+                 print(f"Error during get_log_events pagination: {e}")
+                 # Return error only if we haven't fetched any events yet
+                 if not events:
+                     return {"error": f"An error occurred fetching CloudWatch logs: {str(e)}"}, 500
+                 else:
+                     break # Exit the loop
+
+            events.extend(response.get('events', []))
+
+            # Check if the same token is returned, indicating end of stream
+            returned_token = response.get('nextForwardToken')
+            if returned_token == next_token or not returned_token:
+                break # No more pages
+
+            next_token = returned_token
+            # Optional: Add a small delay to avoid potential rate limiting
+            # import time
+            # time.sleep(0.1)
+
+
         formatted_logs = []
 
         for event in events:
