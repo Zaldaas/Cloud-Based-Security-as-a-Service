@@ -1,0 +1,8 @@
+boto3
+requests
+python-dotenv
+Flask
+Flask-Cors
+streamlit
+requests
+pandas
